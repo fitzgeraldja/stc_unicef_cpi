@@ -4,29 +4,27 @@ import logging
 
 
 def request_dhs_surveys():
-    """API call to DHS
+    """API CALL TO DHS PROGRAM
 
-    :return: survey
-    :rtype: _type_
+    :return: response
+    :type: dataframe
     """
     countries_url = r"https://api.dhsprogram.com/rest/dhs/surveys"
     response = requests.get(countries_url)
-    surveys = pd.DataFrame(response.json()["Data"])
+    response = pd.DataFrame(response.json()["Data"])
 
-    return surveys
+    return response
 
 
 def valid_surveys(region_filter, year_lower_bound, type_survey):
-    """valid_surveys _summary_
+    """SELECT ONLY INFORMATION OF INTEREST
 
-    _extended_summary_
-
-    :param region_filter: _description_
-    :type region_filter: _type_
-    :param year_lower_bound: _description_
-    :type year_lower_bound: _type_
-    :param type_survey: _description_
-    :type type_survey: _type_
+    :param region_filter: Region of interest
+    :type region_filter: str
+    :param year_lower_bound: Lowest possible year
+    :type year_lower_bound: int
+    :param type_survey: Survey type (MICS, DHS)
+    :type type_survey: str
     """
     surveys = request_dhs_surveys()
     surveys = surveys[surveys["RegionName"] == region_filter]
@@ -38,30 +36,33 @@ def valid_surveys(region_filter, year_lower_bound, type_survey):
 
 
 def get_stats_survey(region_filter, year_lower_bound, type_survey):
-    """stats_survey _summary_
+    """COMPUTE STATS FROM SURVEY
 
-    _extended_summary_
-
-    :param df: _description_
-    :type df: _type_
+    :param region_filter: Region of interest
+    :type region_filter: str
+    :param year_lower_bound: Lowest possible year
+    :type year_lower_bound: int
+    :param type_survey: Survey type (MICS, DHS)
+    :type type_survey: str
     """
     df = valid_surveys(region_filter, year_lower_bound, type_survey)
+    print(df.columns)
     logging.basicConfig(
         filename="descriptives_dhs.log", filemode="w", level=logging.DEBUG
     )
-    logging.info("Nº OF SURVEYS PER YEAR")
+    logging.info("Nº OF DHS SURVEYS SINCE 2010")
     logging.info("**********************")
     logging.info(df.groupby("CountryName")["SurveyId"].count().nlargest(60))
     df = df.sort_values(by="SurveyYear", ascending=False)
-    unique = df.drop_duplicates("CountryName", keep="first").reset_index(drop=True)
-    logging.info(unique)
-    vars = ["CountryName", "NumberofHouseholds", "NumberOfWomen", "SurveyYear"]
-    logging.info("Nº HOUSEHOLDS SURVEYED IN MOST RECENT SURVEY")
+    df_g = df.groupby("CountryName").sum().reset_index()
+
+    vars = ["CountryName", "NumberofHouseholds", "NumberOfWomen"]
+    logging.info("Nº HOUSEHOLDS SURVEYED SINCE 2010")
     logging.info("**********************")
-    logging.info(unique.sort_values(by="NumberofHouseholds")[vars])
-    logging.info("Nº OF WOMEN SURVEYED IN MOST RECENT SURVEY")
+    logging.info(df_g.sort_values(by="NumberofHouseholds")[vars])
+    logging.info("Nº OF WOMEN SURVEYED SINCE 2010")
     logging.info("**********************")
-    logging.info(unique.sort_values(by="NumberOfWomen")[vars])
+    logging.info(df_g.sort_values(by="NumberOfWomen")[vars])
 
 
 get_stats_survey("Sub-Saharan Africa", 2010, "DHS")
