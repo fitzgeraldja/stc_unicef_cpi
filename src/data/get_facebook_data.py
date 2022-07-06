@@ -3,27 +3,30 @@
 import time
 import pandas as pd
 import numpy as np
+import h3.api.numpy_int as h3
 
+from math import ceil
 from facebook_business.adobjects.adaccount import AdAccount
 from facebook_business.api import FacebookAdsApi
-from math import ceil
+
+from src.utils.general import get_facebook_credentials
 
 
-def fb_api_init(access_token, ad_account_id):
-    """Init class method
+def fb_api_init(token, id):
+    """Init Facebook API
 
-    :param access_token: _description_
+    :param token: Access token
     :type access_token: str
-    :param ad_account_id: _description_
+    :param id: Account id
     :type ad_account_id: str
-    :return: _description_
-    :rtype: _type_
+    :return: api and account connection
+    :rtype: conn
     """
-    print("Initializing the Facebook Marketing API...")
-    api = FacebookAdsApi.init(access_token=access_token)
-    my_account = AdAccount(ad_account_id)
+    api = FacebookAdsApi.init(access_token=token)
+    account = AdAccount(id)
     try:
-        my_account.get_ads()
+        account.get_ads()
+        print("Initialized successfully!")
     except Exception as e:
         if e._api_error_code == 190:
             raise ValueError("Invalid or expired access token!")
@@ -32,10 +35,44 @@ def fb_api_init(access_token, ad_account_id):
         else:
             raise RuntimeError("Please check you credentials!")
 
-    return api, my_account
+    return api, account
 
 
-def get_delivery_estimate(df, api, my_account, call_limit, radius):
+def set_params(lat, lon, radius, opt):
+
+    geo = {
+        "latitude": lat,
+        "longitude": lon,
+        "radius": radius,
+        "distance_unit": "kilometer",
+    }
+    targeting = {
+        "geo_locations": {
+            "custom_locations": [
+                geo,
+            ],
+        },
+    }
+    params = {
+        "optimization_goal": opt,
+        "targeting_spec": targeting,
+    }
+
+    return params
+
+
+def get_long_lat(df):
+    # df[hex] = df[hex].astype(int)
+    # print(df)
+    # df[["hex_centroid"]] = df[[hex]].apply(lambda row: h3.h3_to_geo(row[hex]), axis=1)
+    # print(df)
+    df[["lat", "long"]] = (
+        df["hex_centroid"].str[1:-1].str.split(",", expand=True).astype(float)
+    )
+    return df
+
+
+def point_delivery_estimate(account, lat, lon, radius, opt):
 
     """_summary_
 
@@ -44,15 +81,28 @@ def get_delivery_estimate(df, api, my_account, call_limit, radius):
     :return: _description_
     :rtype: _type_
     """
-    no_chunks = ceil(len(df) / call_limit)
+    params = set_params(lat, lon, radius, opt)
+    delivery_estimate = account.get_delivery_estimate(params=params)
+
+    return delivery_estimate
+
+
+def get_delivery_estimate(df, token, id, limit, radius):
+
+    """_summary_
+
+    _extended_summary_
+
+    :return: _description_
+    :rtype: _type_
+    """
+    no_chunks = ceil(len(df) / limit)
 
     if no_chunks == 1:
         print("Calling Facebook Ads API; collection will take few minutes!")
     else:
         print(
-            "Calling Facebook Ads API; collection will approximately take "
-            + str(no_chunks - 1)
-            + " hour(s)!"
+            f"Calling Facebook Ads API; collection will approximately take {(no_chunks - 1)} hour(s)!"
         )
 
     estimate_dict = {
@@ -68,17 +118,12 @@ def get_delivery_estimate(df, api, my_account, call_limit, radius):
         for row in chunk.iterrows():
             out = [row[1].source_school_id]
             try:
+                api, account = fb_api_init(token, id)
                 est = point_delivery_estimate(
-                    my_account, row[1].latitude, row[1].longitude, radius
+                    account, row[1]["lat"], row[1]["long"], radius
                 )
-            except Exception as e:
-                if e._api_error_code == 80004:
-                    print(
-                        "There have been too many calls!\nStopped at source school id: "
-                        + str(row[1].source_school_id)
-                    )
-                    break
-                est = [0, 0, False]
+            except:
+                pass
 
             [
                 estimate_dict[j].append(i)
@@ -98,35 +143,23 @@ def get_delivery_estimate(df, api, my_account, call_limit, radius):
     return pd.DataFrame(estimate_dict)
 
 
-def point_delivery_estimate(
-    access_token, ad_account_id, lat, lon, radius, optimization
-):
+def run_code():
+    token, account_id, limit, radius, opt = get_facebook_credentials(
+        "../../conf/credentials.yaml"
+    )
+    api, account = fb_api_init(token, account_id)
 
-    """_summary_
+    # df = point_delivery_estimate(
+    #     account, "13.077020922031977", "6.425812475913585", radius, opt
+    # )
+    # print(df)
+    df = pd.read_csv("clean_nga_dhs.csv")
+    df = get_long_lat(df)
+    print(df)
+    m = get_delivery_estimate(df[:10], api, account, limit, radius)
+    print(m)
+    # df = get_long_lat(df)
+    # print(df)
 
-    _extended_summary_
 
-    :return: _description_
-    :rtype: _type_
-    """
-    targeting_spec = {
-        "geo_locations": {
-            "custom_locations": [
-                {
-                    "latitude": lat,
-                    "longitude": lon,
-                    "radius": radius,
-                    "distance_unit": "kilometer",
-                },
-            ],
-        },
-    }
-    params = {
-        "optimization_goal": optimization,
-        "targeting_spec": targeting_spec,
-    }
-    _, my_account = fb_api_init(access_token, ad_account_id)
-
-    delivery_estimate = my_account.get_delivery_estimate(params=params)
-
-    return delivery_estimate
+run_code()
