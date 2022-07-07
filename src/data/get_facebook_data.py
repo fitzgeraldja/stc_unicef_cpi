@@ -1,11 +1,9 @@
-"""Get data from Facebook Marketing API"""
+"""Get delivery estimates using Facebook Marketing API"""
 
 import time
 import pandas as pd
-import numpy as np
 import h3.api.numpy_int as h3
 
-from math import ceil
 from facebook_business.adobjects.adaccount import AdAccount
 from facebook_business.api import FacebookAdsApi
 
@@ -38,8 +36,18 @@ def fb_api_init(token, id):
     return api, account
 
 
-def set_params(lat, lon, radius, opt):
+def define_params(lat, lon, radius, opt):
+    """Define search parameters
 
+    :param lat: latitude
+    :type lat: str
+    :param long: longitude
+    :type long: str
+    :param radius: radius
+    :type radius: float
+    :param opt: optimization criteria
+    :type opt: string
+    """
     geo = {
         "latitude": lat,
         "longitude": lon,
@@ -61,105 +69,60 @@ def set_params(lat, lon, radius, opt):
     return params
 
 
-def get_long_lat(df):
-    # df[hex] = df[hex].astype(int)
-    # print(df)
+def get_long_lat(data, centroid):
+    """Get longitude and latitude from centroid point
+    :param data: dataset
+    :type data: dataframe
+    :param centroid: name of column containing centroid variable
+    :type centroid: string
+    :return: coords
+    :rtype: list of tuples
+    """
     # df[["hex_centroid"]] = df[[hex]].apply(lambda row: h3.h3_to_geo(row[hex]), axis=1)
     # print(df)
-    df[["lat", "long"]] = (
-        df["hex_centroid"].str[1:-1].str.split(",", expand=True).astype(float)
-    )
-    return df
+    data[["lat", "long"]] = data[centroid].str[1:-1].str.split(", ", expand=True)
+    coords = list(zip(data["lat"], data["long"]))
+    return coords
 
 
 def point_delivery_estimate(account, lat, lon, radius, opt):
-
-    """_summary_
-
-    _extended_summary_
-
+    """Point delivery estimate
     :return: _description_
     :rtype: _type_
     """
-    params = set_params(lat, lon, radius, opt)
-    delivery_estimate = account.get_delivery_estimate(params=params)
-
+    params = define_params(lat, lon, radius, opt)
+    d_e = account.get_delivery_estimate(params=params)
+    delivery_estimate = pd.DataFrame(d_e)
     return delivery_estimate
 
 
-def get_delivery_estimate(df, token, id, limit, radius):
+def get_delivery_estimate():
+    """Get delivery estimates
 
-    """_summary_
-
-    _extended_summary_
-
-    :return: _description_
-    :rtype: _type_
+    :return:
+    :rtype:
     """
-    no_chunks = ceil(len(df) / limit)
-
-    if no_chunks == 1:
-        print("Calling Facebook Ads API; collection will take few minutes!")
-    else:
-        print(
-            f"Calling Facebook Ads API; collection will approximately take {(no_chunks - 1)} hour(s)!"
-        )
-
-    estimate_dict = {
-        "source_school_id": [],
-        "estimate_dau": [],
-        "estimate_mau": [],
-        "estimate_ready": [],
-    }
-
-    for c_no, chunk in enumerate(np.array_split(df, no_chunks)):
-        print("Getting facebook data for the chunk " + str(c_no) + "...")
-
-        for row in chunk.iterrows():
-            out = [row[1].source_school_id]
-            try:
-                api, account = fb_api_init(token, id)
-                est = point_delivery_estimate(
-                    account, row[1]["lat"], row[1]["long"], radius
-                )
-            except:
-                pass
-
-            [
-                estimate_dict[j].append(i)
-                for i, j in zip(out + list(est), estimate_dict.keys())
-            ]
-
-        print(
-            "Done! Hold for one hour!\nTotal number of requests: "
-            + str(api._num_requests_attempted)
-            + "\nNumber of remaining chunks: "
-            + str(no_chunks - c_no - 1)
-        )
-
-        if (no_chunks - c_no - 1) != 0:
-            time.sleep(3600)
-
-    return pd.DataFrame(estimate_dict)
-
-
-def run_code():
-    token, account_id, limit, radius, opt = get_facebook_credentials(
+    df = pd.read_csv("clean_nga_dhs.csv")
+    coords = get_long_lat(df, "hex_centroid")
+    token, account_id, _, radius, opt = get_facebook_credentials(
         "../../conf/credentials.yaml"
     )
-    api, account = fb_api_init(token, account_id)
+    data = pd.DataFrame()
+    _, account = fb_api_init(token, account_id)
+    for lat, long in coords:
+        while True:
+            try:
+                row = point_delivery_estimate(account, lat, long, radius, opt)
+                row["lat"], row["long"] = lat, long
+                data = data.append(row, ignore_index=True)
+            except Exception:
+                print("There have been too many calls!")
+                time.sleep(36000)
+                continue
+            break
 
-    # df = point_delivery_estimate(
-    #     account, "13.077020922031977", "6.425812475913585", radius, opt
-    # )
-    # print(df)
-    df = pd.read_csv("clean_nga_dhs.csv")
-    df = get_long_lat(df)
-    print(df)
-    m = get_delivery_estimate(df[:10], api, account, limit, radius)
-    print(m)
-    # df = get_long_lat(df)
-    # print(df)
+    print(data)
+    data.to_parquet("connectivity_nigeria.parquet")
 
 
-run_code()
+get_delivery_estimate()
