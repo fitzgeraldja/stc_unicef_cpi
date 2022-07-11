@@ -20,5 +20,6 @@ def get_facebook_credentials(creds_file):
     id = creds["account_id"]
     limit = creds["limit"]
     radius = creds["radius"]
+    optimization = creds["optimization"]
 
-    return token, id, limit, radius
+    return token, id, limit, radius, optimization

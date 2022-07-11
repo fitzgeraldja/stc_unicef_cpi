@@ -109,20 +109,29 @@ def get_delivery_estimate():
     )
     data = pd.DataFrame()
     _, account = fb_api_init(token, account_id)
-    for lat, long in coords:
-        while True:
-            try:
-                row = point_delivery_estimate(account, lat, long, radius, opt)
-                row["lat"], row["long"] = lat, long
-                data = data.append(row, ignore_index=True)
-            except Exception:
-                print("There have been too many calls!")
-                time.sleep(36000)
-                continue
-            break
-
-    print(data)
-    data.to_parquet("connectivity_nigeria.parquet")
+    for i, (lat, long) in enumerate(coords[979:]):
+        # coords[147] prob!!
+        # 12.925100390654583 4.114276850465597
+        # 12.937335470049032 13.658856220094602
+        # 12.458455660302773 13.226811407217733
+        # 12.590859285972973 12.676161554371511
+        # 12.72501865899576 12.819890365987854
+        # 6.333381924196154 6.892878272763654
+        # 9.710345808273702 5.383430879183822
+        # 10.6605036482887 5.898300880348415
+        # 8.607634966320314 10.306819321447255
+        # 8.17510218571346 10.141325772840773
+        # TODO: try & except for points not found through the API
+        # TODO: try & except for calls limit per hour
+        print(i, lat, long)
+        try:
+            row = point_delivery_estimate(account, lat, long, radius, opt)
+            row["lat"], row["long"] = lat, long
+            data = data.append(row, ignore_index=True)
+        except Exception:
+            print("There have been too many calls!")
+            data.to_parquet(f"connectivity_nigeria_{i}.parquet")
+            time.sleep(3600)
 
 
 get_delivery_estimate()
