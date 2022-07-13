@@ -109,9 +109,6 @@ def get_delivery_estimate(coords):
     data = pd.DataFrame()
     _, account = fb_api_init(token, account_id)
     for i, (lat, long) in enumerate(coords[979:]):
-        # TODO: try & except for points not found through the API
-        # TODO: try & except for calls limit per hour
-        print(i, lat, long)
         try:
             row = point_delivery_estimate(account, lat, long, radius, opt)
             row["lat"], row["long"] = lat, long
@@ -122,6 +119,7 @@ def get_delivery_estimate(coords):
                 data.to_parquet(f"connectivity_nigeria_{i}.parquet")
                 time.sleep(3600)
             else:
+                print(f"Point {i}, ({lat, long}) not found.")
                 pass
 
 
