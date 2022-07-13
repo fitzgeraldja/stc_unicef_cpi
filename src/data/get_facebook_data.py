@@ -97,7 +97,13 @@ def point_delivery_estimate(account, lat, lon, radius, opt):
     return delivery_estimate
 
 
-def get_delivery_estimate(coords):
+def delivery_estimate(account, lat, long, radius, opt):
+    row = point_delivery_estimate(account, lat, long, radius, opt)
+    row["lat"], row["long"] = lat, long
+    return row
+
+
+def get_facebook_estimates(coords):
     """Get delivery estimates from a lists of coordinates
 
     :return:
@@ -110,20 +116,21 @@ def get_delivery_estimate(coords):
     _, account = fb_api_init(token, account_id)
     for i, (lat, long) in enumerate(coords[:900]):
         try:
-            row = point_delivery_estimate(account, lat, long, radius, opt)
-            row["lat"], row["long"] = lat, long
+            row = delivery_estimate(account, lat, long, radius, opt)
             data = data.append(row, ignore_index=True)
         except Exception as e:
             if e._api_error_code == 80004:
-                print("Too many calls!")
-                data.to_parquet(f"connectivity_nigeria.parquet")
+                print(f"Too many calls!\n Stop at {i}, ({lat, long}).")
+                data.to_parquet("connectivity_nigeria.parquet")
                 time.sleep(3600)
+                row = delivery_estimate(account, lat, long, radius, opt)
+                data = data.append(row, ignore_index=True)
             else:
                 print(f"Point {i}, ({lat, long}) not found.")
                 pass
-        data.to_parquet(f"connectivity_nigeria.parquet")
+        data.to_parquet("connectivity_nigeria.parquet")
 
 
 df = pd.read_csv("nga_clean_v1.csv")
 coords = get_long_lat(df, "hex_code")
-get_delivery_estimate(coords)
+get_facebook_estimates(coords)
