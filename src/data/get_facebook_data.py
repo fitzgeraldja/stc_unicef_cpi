@@ -79,7 +79,7 @@ def get_long_lat(data, hex_code):
     :rtype: list of tuples
     """
     data["hex_centroid"] = data[[hex_code]].apply(
-        lambda row: h3.h3_to_geo(row[hex]), axis=1
+        lambda row: h3.h3_to_geo(row[hex_code]), axis=1
     )
     data["lat"], data["long"] = data["hex_centroid"].str
     coords = list(zip(data["lat"], data["long"]))
@@ -108,7 +108,7 @@ def get_delivery_estimate(coords):
     )
     data = pd.DataFrame()
     _, account = fb_api_init(token, account_id)
-    for i, (lat, long) in enumerate(coords[979:]):
+    for i, (lat, long) in enumerate(coords[:900]):
         try:
             row = point_delivery_estimate(account, lat, long, radius, opt)
             row["lat"], row["long"] = lat, long
@@ -116,11 +116,12 @@ def get_delivery_estimate(coords):
         except Exception as e:
             if e._api_error_code == 80004:
                 print("Too many calls!")
-                data.to_parquet(f"connectivity_nigeria_{i}.parquet")
+                data.to_parquet(f"connectivity_nigeria.parquet")
                 time.sleep(3600)
             else:
                 print(f"Point {i}, ({lat, long}) not found.")
                 pass
+        data.to_parquet(f"connectivity_nigeria.parquet")
 
 
 df = pd.read_csv("nga_clean_v1.csv")
