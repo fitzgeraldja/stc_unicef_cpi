@@ -120,14 +120,16 @@ def get_facebook_estimates(coords):
             data = data.append(row, ignore_index=True)
         except Exception as e:
             if e._api_error_code == 80004:
-                print(f"Too many calls!\n Stop at {i}, ({lat, long}).")
+                print(f"Too many calls!\n Stopped at {i}, ({lat, long}).")
                 data.to_parquet("connectivity_nigeria.parquet")
                 time.sleep(3600)
                 row = delivery_estimate(account, lat, long, radius, opt)
-                data = data.append(row, ignore_index=True)
             else:
                 print(f"Point {i}, ({lat, long}) not found.")
+                row = pd.DataFrame()
+                row["lat"], row["long"] = lat, long
                 pass
+            data = data.append(row, ignore_index=True)
         data.to_parquet("connectivity_nigeria.parquet")
 
 
