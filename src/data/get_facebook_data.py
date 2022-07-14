@@ -103,7 +103,7 @@ def delivery_estimate(account, lat, long, radius, opt):
     return row
 
 
-def get_facebook_estimates(coords):
+def get_facebook_estimates(coords, name_out):
     """Get delivery estimates from a lists of coordinates
 
     :return:
@@ -121,7 +121,7 @@ def get_facebook_estimates(coords):
         except Exception as e:
             if e._api_error_code == 80004:
                 print(f"Too many calls!\nStopped at {i}, ({lat, long}).")
-                data.to_parquet("connectivity_nigeria_4.parquet")
+                data.to_parquet(name_out)
                 time.sleep(3800)
                 row = delivery_estimate(account, lat, long, radius, opt)
             else:
@@ -130,9 +130,10 @@ def get_facebook_estimates(coords):
                 row["lat"], row["long"] = lat, long
                 pass
             data = data.append(row, ignore_index=True)
-        data.to_parquet("connectivity_nigeria_4.parquet")
+        data.to_parquet(name_out)
 
 
-df = pd.read_csv("nga_clean_v1.csv")
+name_in, name_out = "nga_clean_v1.csv", "connectivity_nigeria.parquet"
+df = pd.read_csv(name_in)
 coords = get_long_lat(df, "hex_code")
-get_facebook_estimates(coords)
+get_facebook_estimates(coords, name_out)
