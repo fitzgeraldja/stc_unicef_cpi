@@ -114,15 +114,15 @@ def get_facebook_estimates(coords):
     )
     data = pd.DataFrame()
     _, account = fb_api_init(token, account_id)
-    for i, (lat, long) in enumerate(coords[:900]):
+    for i, (lat, long) in enumerate(coords):
         try:
             row = delivery_estimate(account, lat, long, radius, opt)
             data = data.append(row, ignore_index=True)
         except Exception as e:
             if e._api_error_code == 80004:
-                print(f"Too many calls!\n Stopped at {i}, ({lat, long}).")
-                data.to_parquet("connectivity_nigeria.parquet")
-                time.sleep(3600)
+                print(f"Too many calls!\nStopped at {i}, ({lat, long}).")
+                data.to_parquet("connectivity_nigeria_4.parquet")
+                time.sleep(3800)
                 row = delivery_estimate(account, lat, long, radius, opt)
             else:
                 print(f"Point {i}, ({lat, long}) not found.")
@@ -130,7 +130,7 @@ def get_facebook_estimates(coords):
                 row["lat"], row["long"] = lat, long
                 pass
             data = data.append(row, ignore_index=True)
-        data.to_parquet("connectivity_nigeria.parquet")
+        data.to_parquet("connectivity_nigeria_4.parquet")
 
 
 df = pd.read_csv("nga_clean_v1.csv")
