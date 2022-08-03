@@ -99,6 +99,7 @@
                 // Copy coordinates array.
                 const coordinates = e.features[0].geometry.coordinates[0][0].slice();
                 const description = e.features[0].properties.dep_sanitation;
+                // description = '<h3>' + 'Uncertainty' + marker.properties.description + '</a></p><p><a href="' + marker.properties.link + '" target="_blank"><img src="' + marker.properties.picture + '" title="" /></a></p>'
 
                 // Ensure that if the map is zoomed out such that multiple
                 // copies of the feature are visible, the popup appears
@@ -112,7 +113,7 @@
                 popup.setLngLat(coordinates).setHTML(description).addTo(map);
             });
 
-            map.on('mouseleave', 'places', () => {
+            map.on('mouseleave', 'sanitation-layer', () => {
                 map.getCanvas().style.cursor = '';
                 popup.remove();
             });
