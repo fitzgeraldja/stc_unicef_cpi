@@ -23,6 +23,51 @@
 </head>
 
 <body>
+    <style>
+        #menu {
+            background: #fff;
+            position: absolute;
+            z-index: 1;
+            top: 10px;
+            right: 10px;
+            border-radius: 3px;
+            width: 120px;
+            border: 1px solid rgba(0, 0, 0, 0.4);
+            font-family: 'Open Sans', sans-serif;
+        }
+
+        #menu a {
+            font-size: 13px;
+            color: #404040;
+            display: block;
+            margin: 0;
+            padding: 0;
+            padding: 10px;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+            text-align: center;
+        }
+
+        #menu a:last-child {
+            border: none;
+        }
+
+        #menu a:hover {
+            background-color: #f8f8f8;
+            color: #404040;
+        }
+
+        #menu a.active {
+            background-color: #3887be;
+            color: #ffffff;
+        }
+
+        #menu a.active:hover {
+            background: #3074a4;
+        }
+    </style>
+
+    <nav id="menu"></nav>
     <div id='map'></div>
     <script>
         // The value for 'accessToken' begins with 'pk...'
@@ -60,29 +105,41 @@
                 'source': 'nga_tileset', //'composite',
                 'source-layer': 'nga_fake_layer_1',
                 'paint': {
+                    'fill-extrusion-color': '#f23faa',
                     'fill-extrusion-height': [
                         'interpolate',
                         ['linear'],
-                        ['get', 'dep_water'], // THIS SHOULD BE POPULATION 
+                        ['get', 'dep_sanitation'], // THIS SHOULD BE POPULATION 
                         0, // min value
                         0, // output corresponding
                         1, // max value 
                         1000
                     ],
-
-                    // Use an 'interpolate' expression to
-                    // add a smooth transition.
-                    'fill-extrusion-color': [
-                        'interpolate',
-                        ['linear'],
-                        ['get', 'dep_sanitation'],
-                        0,
-                        ['to-color', '#f23faa'],
-                        1,
-                        ['to-color', '#5667a3']
-                    ]
+                    'fill-extrusion-opacity': 0.8
                 },
             });
+
+            map.addLayer({
+                'id': 'sanitation-black-layer',
+                'type': 'fill-extrusion',
+                'source': 'nga_tileset', //'composite',
+                'source-layer': 'nga_fake_layer_1',
+                'paint': {
+                    'fill-extrusion-color': '#ffffff',
+                    'fill-extrusion-height': [
+                        'interpolate',
+                        ['linear'],
+                        ['get', 'dep_sanitation'], // THIS SHOULD BE POPULATION 
+                        0, // min value
+                        0, // output corresponding
+                        1, // max value 
+                        1000
+                    ],
+                    'fill-extrusion-opacity': 0.8
+                },
+            });
+
+
 
             // HOVER
             // Create a popup, but don't add it to the map yet.
@@ -117,6 +174,64 @@
                 map.getCanvas().style.cursor = '';
                 popup.remove();
             });
+
+            // After the last frame rendered before the map enters an "idle" state.
+            map.on('idle', () => {
+                // If these two layers were not added to the map, abort
+                if (!map.getLayer('sanitation-layer') || !map.getLayer('sanitation-black-layer')) {
+                    return;
+                }
+
+                // Enumerate ids of the layers.
+                const toggleableLayerIds = ['sanitation-layer', 'sanitation-black-layer'];
+
+                // Set up the corresponding toggle button for each layer.
+                for (const id of toggleableLayerIds) {
+                    // Skip layers that already have a button set up.
+                    if (document.getElementById(id)) {
+                        continue;
+                    }
+
+                    // Create a link.
+                    const link = document.createElement('a');
+                    link.id = id;
+                    link.href = '#';
+                    link.textContent = id;
+                    link.className = 'active';
+
+                    // Show or hide layer when the toggle is clicked.
+                    link.onclick = function (e) {
+                        const clickedLayer = this.textContent;
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        const visibility = map.getLayoutProperty(
+                            clickedLayer,
+                            'visibility'
+                        );
+
+                        // Toggle layer visibility by changing the layout object's visibility property.
+                        if (visibility === 'visible') {
+                            map.setLayoutProperty(clickedLayer, 'visibility', 'none');
+                            this.className = '';
+                        } else {
+                            this.className = 'active';
+                            map.setLayoutProperty(
+                                clickedLayer,
+                                'visibility',
+                                'visible'
+                            );
+                        }
+                    };
+
+                    const layers = document.getElementById('menu');
+                    layers.appendChild(link);
+                }
+            })
+
+
+
+
         });
 
     </script>
