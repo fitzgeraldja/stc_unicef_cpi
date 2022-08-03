@@ -27,16 +27,109 @@
     <script>
         // The value for 'accessToken' begins with 'pk...'
         mapboxgl.accessToken = 'pk.eyJ1IjoibWFyaW5hdmljaW5pIiwiYSI6ImNsNjB5NjFqNDFyd2wzam5xeXc5OTBvOTcifQ.RWeI0C6NiM1q7NMstm8jmw'; //'YOUR_MAPBOX_ACCESS_TOKEN';
-        const map = new mapboxgl.Map({
+        var map = new mapboxgl.Map({
             container: 'map',
             // Replace YOUR_STYLE_URL with your style URL.
-            style: 'mapbox://styles/examples/cjgiiz9ck002j2ss5zur1vjji',
+            style: 'mapbox://styles/mapbox/light-v10',
+            // style: 'mapbox://styles/marinavicini/cl620uqdk000615ld2q47nri5',
             center: [7.5, 8.5],
-            zoom: 5
+            zoom: 10
         });
 
-    // Code from the next step will go here.
-    // Add data source
+        // // After 2 seconds it zooms out to display all Nigeria
+        // setTimeout(function () {
+        //     map.flyTo({
+        //         zoom: 5
+        //     })
+        // }, 2000)
+
+        // Code from the next step will go here.
+        // Add data source
+        map.on('load', function () {
+            map.addSource('nga_tileset', {
+                type: 'vector',
+                url: 'mapbox://marinavicini.NGA_fake_v02'
+            });
+            // map.addLayer({
+            //     'id': 'heatmap-layer',
+            //     'type': 'heatmap',
+            //     'source': 'nga_tileset',
+            //     'source-layer': 'nga_fake_layer_1', //nga_fake_layer_1',
+
+            //     'paint': {
+            //         'heatmap-weight': {
+            //             property: 'dep_sanitation_sev',
+            //             // type: 'exponential',
+            //             stops: [
+            //                 [0, 0],
+            //                 [1, 1]
+            //             ]
+            //         },
+            //     }
+            // });
+
+
+
+            // you can add a Layer from the style added before 
+            // setting the source to be composite
+            // and the source-layer to what I need
+            map.addLayer({
+                'id': 'sanitation-layer',
+                'type': 'fill-extrusion',
+                'source': 'nga_tileset', //'composite',
+                'source-layer': 'nga_fake_layer_1',
+                'paint': {
+                    'fill-extrusion-height': [
+                        'interpolate',
+                        ['linear'],
+                        ['get', 'dep_water'], // THIS SHOULD BE POPULATION 
+                        0, // min value
+                        0, // output corresponding
+                        1, // max value 
+                        1000
+                    ],
+
+                    // Use an 'interpolate' expression to
+                    // add a smooth transition effect to
+                    // the buildings as the user zooms in.
+
+                    'fill-extrusion-color': [
+                        'interpolate',
+                        ['linear'],
+                        ['get', 'dep_sanitation'],
+                        0,
+                        ['to-color', '#f23faa'],
+                        1,
+                        ['to-color', '#5667a3']
+                    ]
+                    //                         interpolation: ["linear"],
+                    //                         input: number,
+                    //                         stop_input_1: 0, stop_output_1: #f23faa,
+                    //                         stop_input_n: 1, stop_output_n: #5667a3,
+                    // ]: OutputType(number, array<number>, or Color)
+
+
+
+                    // [
+                    //     'interpolate',
+                    //     ['linear'],
+                    //     // ['zoom'],
+                    //     15,
+                    //     0,
+                    //     15.05,
+                    //     ['get', 'dep_sanitation_sev']
+                    // ],
+
+                },
+            });
+
+            map.on('click', 'second-layer', function (event) {
+                // new mapboxgl.Popup()
+                //     .setLngLat(event.features[0].geometry.coordinates)
+                //     .setHTML(`<strong>DBH:</strong> ${event.features[0].properties.dep_sanitation_sev}`)
+                //     .addTo(map);
+            });
+        });
 
     </script>
 
