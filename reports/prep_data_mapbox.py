@@ -12,6 +12,8 @@ from geojson_rewind import rewind
 # dep_sanitation_sev, ....
 # confidence_sanitation, ...
 # population
+# deprived, confidence_deprived
+# sumpoor, confidence_sumpoor
 
 # TO DO
 # Crop results at second decimal number
@@ -40,8 +42,8 @@ def prep_data_mapbox(data):
                 "sanitation": data.loc[i]["dep_sanitation_sev"],
                 "confidence_sanitation": data.loc[i]["confidence_sanitation"],
                 # health
-                "health": data.loc[i]["dep_health_sev"],
-                "confidence_health": data.loc[i]["confidence_health"],
+                # "health": data.loc[i]["dep_health_sev"],
+                # "confidence_health": data.loc[i]["confidence_health"],
                 # housing
                 "housing": data.loc[i]["dep_housing_sev"],
                 "confidence_housing": data.loc[i]["confidence_housing"],
@@ -49,14 +51,19 @@ def prep_data_mapbox(data):
                 "education": data.loc[i]["dep_education_sev"],
                 "confidence_education": data.loc[i]["confidence_education"],
                 # nutrition
-                "nutrition": data.loc[i]["dep_nutrition_sev"],
-                "confidence_nutrition": data.loc[i]["confidence_nutrition"],
+                # "nutrition": data.loc[i]["dep_nutrition_sev"],
+                # "confidence_nutrition": data.loc[i]["confidence_nutrition"],
                 # water
                 "water": data.loc[i]["dep_water_sev"],
                 "confidence_water": data.loc[i]["confidence_water"],
                 # hex_code and population
                 "hex_code": int(data.loc[i]["hex_code"]),
                 "population": int(data.loc[i]["population"]),
+                # prevalence and severity
+                "deprived": int(data.loc[i]["deprived_sev"]),
+                "confidence_deprived": data.loc[i]["confidence_deprived"],
+                "sumpoor": int(data.loc[i]["sumpoor_sev"]),
+                "confidence_sumpoor": data.loc[i]["confidence_sumpoor"],
             },
         )
         for i in range(data.shape[0])
