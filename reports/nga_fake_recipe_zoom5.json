@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "layers": {
+    "nga_fake_layer_1": {
+      "source": "mapbox://tileset-source/marinavicini/nga_fake_res6",
+      "minzoom": 1,
+      "maxzoom": 5
+    }
+  }
+}
