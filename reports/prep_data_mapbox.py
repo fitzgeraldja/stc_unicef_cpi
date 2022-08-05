@@ -24,6 +24,11 @@ def prep_data_mapbox(data):
     """
     data: data with hex_code columns and dimensions to plot
     """
+
+    # remove hex_code where pop is less than 50
+    # TODO: check that population is not scaled
+    # data = data[data["population"] > 50].copy()
+
     # Add geometry of the polygon
     data["geometry_latlon"] = [
         Polygon(h3.h3_to_geo_boundary(x, geo_json=False)) for x in data["hex_code"]
@@ -56,14 +61,15 @@ def prep_data_mapbox(data):
                 # water
                 "water": data.loc[i]["dep_water_sev"],
                 "confidence_water": data.loc[i]["confidence_water"],
-                # hex_code and population
-                "hex_code": int(data.loc[i]["hex_code"]),
+                # population
+                # "hex_code": int(data.loc[i]["hex_code"]),
                 "population": int(data.loc[i]["population"]),
                 # prevalence and severity
-                "deprived": int(data.loc[i]["deprived_sev"]),
+                "deprived": data.loc[i]["deprived_sev"],
                 "confidence_deprived": data.loc[i]["confidence_deprived"],
-                "sumpoor": int(data.loc[i]["sumpoor_sev"]),
+                "sumpoor": data.loc[i]["sumpoor_sev"],
                 "confidence_sumpoor": data.loc[i]["confidence_sumpoor"],
+                # "centroid": data.loc[i]["centroid"],
             },
         )
         for i in range(data.shape[0])
@@ -76,3 +82,28 @@ def prep_data_mapbox(data):
     feature_collection_rewind = rewind(feature_collection)
 
     return feature_collection_rewind
+
+
+def aggregate_results(data, res):
+    '''
+    aggregate result in the new resolution taking the means of the hexagons
+    whose centroid belong to the hexagon in that resolution
+    and summing the population
+    '''
+
+    # Compute Coordinates of Centroid (long, lat)
+    data["centroid"] = data["hex_code"].apply(
+        lambda x: Point(h3.h3_to_geo(x)[1], h3.h3_to_geo(x)[0])
+    )
+    # Assign hexcode in new resolution to each centroid
+    data['new_hexcode'] = data['centroid'].apply(lambda x: h3.geo_to_h3(x.coords[0][1], x.coords[0][0], res))
+
+    data = data.groupby('new_hexcode').mean().reset_index()
+    data.drop(columns = ['hex_code'], inplace=True)
+
+    # take the sum of the population
+    data['population'] = list(data.groupby('new_hexcode')['population'].sum())
+
+    return data.rename(columns={'new_hexcode':'hex_code'})
+  
+
