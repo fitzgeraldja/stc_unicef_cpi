@@ -1,3 +1,6 @@
+import pandas as pd
+import numpy as np
+
 COLUMNS_OPHI = [
     "ISO country numeric code",
     "ISO country code",
@@ -27,17 +30,13 @@ COLUMNS_OPHI = [
     "Indicator (s) missing",
 ]
 
-import pandas as pd
-import numpy as np
-
 
 def clean_df(path):
-
     # Read dataframe
     df = pd.read_table(
         path + "/Table-5-Subnational-Results-MPI-2021-uncensored.csv",
         sep=";",
-        names=columns_name,
+        names=COLUMNS_OPHI,
     )
 
     # remove the first and last rows that have no information
@@ -92,4 +91,5 @@ def get_validation_data(path, country_name="Nigeria"):
     return country.reset_index(drop=True)
 
 
+path = "C:/Users/vicin/Desktop/DSSG/Validation Data"  # /Table-5-Subnational-Results-MPI-2021-uncensored.csv
 get_validation_data(path, country_name="Nigeria")

@@ -71,6 +71,5 @@ def get_admin1(path, country_name, res=7):
     return df
 
 
-path = "C:/Users/vicin/Desktop/DSSG/Validation Data/ne_10m_admin_1_states_provinces"
-get_admin1(path, "Senegal", res=7)
-
+# path = "C:/Users/vicin/Desktop/DSSG/Validation Data/ne_10m_admin_1_states_provinces"
+# get_admin1(path, "Senegal", res=7)
