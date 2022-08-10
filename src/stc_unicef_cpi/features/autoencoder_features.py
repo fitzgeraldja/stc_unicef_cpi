@@ -1,62 +1,68 @@
 import tensorflow
-from tensorflow import keras
-from keras.layers import Conv2D, UpSampling2D, MaxPooling2D
 import numpy as np
-from tensorflow.keras.optimizers import Adam
-import gc
-from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
-from tensorflow.keras.callbacks import EarlyStopping, TensorBoard
 import keras_tuner as kt
+import glob
+import matplotlib.pyplot as plt
+
+from tensorflow import keras
+from tensorflow.keras.optimizers import Adam
+from keras.layers import Conv2D, UpSampling2D, MaxPooling2D
+from tensorflow.keras.callbacks import EarlyStopping, TensorBoard
+from sklearn.preprocessing import StandardScaler
+from pathlib import Path
 from pyDRMetrics.pyDRMetrics import *
 from stc_unicef_cpi.data import cv_loaders as cvl
-from sklearn.preprocessing import StandardScaler
 from stc_unicef_cpi.data import process_geotiff as pg
-from pathlib import Path
-import glob
 
-random_state=0
-np.random.seed(random_state)
+
+def set_seed(random_state=0):
+    """Set seed"""
+    np.random.seed(random_state)
+
 
 def get_train_data(tiff_dir, hex_codes, dim=16):
+    """Get training data for the autoencoder
+    :param tiff_dir: directory containing all country tiffs
+    :type tiff_dir: str
+    :param hex_codes: H3 hexagons for training set
+    :type hex_codes: _type_
+    :param dim: dimension for images extracted from rasters, defaults to 16
+    :type dim: int, optional
+    :return: numpy array of size (len(hex_codes), 16, 16, total channels from tiff_dir)
+    :rtype: numpy array
+    """
+    set_seed()
+    data = pg.convert_tiffs_to_image_dataset(tiff_dir, hex_codes, dim, dim)
+    shape = data.shape
 
-  """
-  Get training data for the autoencoder
-  
-  Inputs:
-    tiff_dir: directory containing all country tiffs; function assumes tiffs have been clipped/reprojected where necessary
-    hex_codes: H3 hexagons for training set
-    dim: dimension for images extracted from rasters
-  
-  Outputs: numpy array of size (len(hex_codes), 16, 16, total channels from tiff_dir)
-    
-  """
-  data = pg.convert_tiffs_to_image_dataset(tiff_dir, hex_codes, dim, dim)
-  shape = data.shape
+    # scale data
+    data = StandardScaler().fit_transform(data.reshape(data.shape[0], -1))
+    data = data.reshape(shape)
 
-  # scale data
-  data = StandardScaler().fit_transform(data.reshape(data.shape[0], -1))
-  data = data.reshape(shape)
+    # channels last
+    data = np.transpose(data, (0, 2, 3, 1))
 
-  # channels last
-  data = np.transpose(data, (0, 2, 3, 1))
+    # fill nans
+    if np.isnan(np.sum(data)):
+        lower_bound = np.min(data[~np.isnan(data)])
+        if lower_bound < 0:
+            data = np.nan_to_num(data, nan=2*lower_bound)
+        else:
+            data = np.nan_to_num(data, nan=-2*lower_bound)
 
-  # fill nans
-  if np.isnan(np.sum(data)):
-    lower_bound = np.min(data[~np.isnan(data)])
-    if lower_bound < 0:
-      data = np.nan_to_num(data, nan=2*lower_bound)
-    else:
-      data = np.nan_to_num(data, nan=-2*lower_bound)
-  
-  return data
+    return data
 
-def get_best_hyperparameters(input_data, random_state=0, validation_split=0.1,
-                            batch_size=[64, 128],
-                            learning_rate=[1e-2, 5e-3, 1e-3],
-                            epochs=100, logdir="autoencoder",
-                            project_name="tune_model", es_patience=5):
-  
+
+def get_best_hyperparameters(
+    input_data, 
+    random_state=0,
+    validation_split=0.1,
+    batch_size=[64, 128],
+    learning_rate=[1e-2, 5e-3, 1e-3],
+    epochs=100, logdir="autoencoder",
+    project_name="tune_model", 
+    es_patience=5
+    ):
   """
   Get the tuned hyperparameters for the model
 
@@ -151,8 +157,14 @@ def get_best_hyperparameters(input_data, random_state=0, validation_split=0.1,
   return hps
 
 
-def get_trained_autoencoder(input_data, batch_size=128, epochs=100, learning_rate=0.001, save_dir=None, model_name=None):
-  
+def get_trained_autoencoder(
+  input_data,
+  batch_size=128,
+  epochs=100,
+  learning_rate=0.001,
+  save_dir=None,
+  model_name=None
+  ):
   """
   Get the trained model using tuned hyperparameters
 
@@ -211,7 +223,6 @@ def get_trained_autoencoder(input_data, batch_size=128, epochs=100, learning_rat
 
 
 def get_encoded_features(trained_autoencoder_dir, model_name, hex_codes, tiff_files_dir, dim=16, batch_size=4096):
-
   """
   Get encoded features in batches
 
@@ -280,7 +291,6 @@ def check_autoencoder_reconstruction(trained_autoencoder, input_data):
   plt.show()
 
 def get_encoding_metrics(original_data, encoded_features):
-
   """
   Get residual variance, AUC Trustworthiness & AUC Continuity for encodings
 
@@ -291,13 +301,13 @@ def get_encoding_metrics(original_data, encoded_features):
   Outputs: None
   """
   
-  if original_data.ndim > 2:
-    original_data = original_data.reshape(original_data.shape[0], -1)
+    if original_data.ndim > 2:
+        original_data = original_data.reshape(original_data.shape[0], -1)
   
-  if encoded_features.ndim > 2:
-    encoded_features = encoded_features.reshape(encoded_features.shape[0], -1)
+    if encoded_features.ndim > 2:
+        encoded_features = encoded_features.reshape(encoded_features.shape[0], -1)
 
-  drm = DRMetrics(original_data, encoded_features)
-  print("Residual Variance: ", str(drm.Vrs))
-  print("AUC Trustworthiness: ", str(drm.AUC_T))
-  print("AUC Continuity: ", str(drm.AUC_C))
+    drm = DRMetrics(original_data, encoded_features)
+    print("Residual Variance: ", str(drm.Vrs))
+    print("AUC Trustworthiness: ", str(drm.AUC_T))
+    print("AUC Continuity: ", str(drm.AUC_C))
