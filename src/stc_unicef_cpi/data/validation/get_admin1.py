@@ -19,6 +19,19 @@ def get_world_admin1(path):
     return world
 
 
+def get_country_admin1(world, country_name):
+    """Return dataframe with data of a country
+    with columns country, admin1 (state) and geometry
+    :param world: df with admin1 info
+    :type world: pandas DataFrame
+    :param country_name: name of a country
+    :type country_name: str
+    """
+    country = world[world["country"] == country_name].copy()
+    country = country[["country", "admin1", "geometry"]].copy()
+    return country
+
+
 def get_hex_region(region_name, country, res=7):
     """
     Get dataframe with all hexcodes belonging to a region of a country
