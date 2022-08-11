@@ -1,6 +1,6 @@
 import pandas as pd
 from shapely.geometry import Point
-from stc_unicef_cpi.data.validation import get_admin1 as ga1
+from stc_unicef_cpi.data.validation import get_admin1 as adm1
 
 dimensions = [
     "sumpoor_sev",
@@ -57,8 +57,8 @@ def weighted_mean(data, column_name):
 
 def aggregate_dhs_admin1(path_admin1, path_dhs, country_name, country_code):
     # get world
-    world = ga1.get_world_admin1(path_admin1)
-    country = ga1.get_country_admin1(world, country_name)
+    world = adm1.get_world_admin1(path_admin1)
+    country = adm1.get_country_admin1(world, country_name)
     dic_geom = get_dic_state_geom(country)
 
     # download dhs
