@@ -20,14 +20,16 @@ def quadkey_to_polygon(quadkey):
     """
     # Extract coordinates of quadkey
     quadkey = QuadKey(quadkey)
-    nw = quadkey.to_geo(0)
-    ne = quadkey.to_geo(1)
-    sw = quadkey.to_geo(2)
-    se = quadkey.to_geo(3)
-    center = quadkey.to_geo(4)
+    # This returns a tuple (lat, long)
+    n, w = quadkey.to_geo(0)
+    # ne = quadkey.to_geo(1)
+    # sw = quadkey.to_geo(2)
+    s, e = quadkey.to_geo(3)
+    # center = quadkey.to_geo(4)
 
     # build polygon
-    poly_quadkey = Polygon([Point(nw), Point(ne), Point(se), Point(sw)])
+    poly_quadkey = Polygon([Point([w, n]), Point([e, n]), Point([e, s]), Point([w, s])])
+    # poly_quadkey = Polygon([Point(nw), Point(ne), Point(se), Point(sw)])
     return poly_quadkey
 
 
@@ -77,7 +79,10 @@ def get_rwi_country(path, code):
     :param code: code of the country [SHOULD BE AUTOMATED]
     :type code: str
     """
-    rwi_country = pd.read_csv(path + "/" + code + "_relative_wealth_index.csv")
+    # import quadkey as a string
+    rwi_country = pd.read_csv(
+        path + "/" + code + "_relative_wealth_index.csv", dtype={"quadkey": "string"}
+    )
     rwi_country.head()
     return rwi_country
 
@@ -135,16 +140,16 @@ def get_perc_areas(hex, dic, data):
 
 
 def weighted_rwi(qk_weights, dic_rwi):
-    """
+    """ 
     Compute weighted RWI for a hexagon
     :param qk_weights: dictionary with keys quadkeys and values the proportion of area shared with hexagon
     :type qk_weights: dict
     :param dic_rwi: dictionary with key quadkey and value the RWI of that quadkey
     :type dic_rwi: dict
     """
-    try:
+    if len(qk_weights.keys()):
         return sum([qk_weights[qk] * dic_rwi[qk] for qk in qk_weights.keys()])
-    except:
+    else:
         return np.nan
 
 
