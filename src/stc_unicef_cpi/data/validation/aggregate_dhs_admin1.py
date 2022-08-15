@@ -16,6 +16,7 @@ dimensions = [
 
 # NA
 # MEarning of output
+# Sometimes DHS admin1 is region 1, sometimes it's region2 -- THIS NEEDS TO BE SPECIFIED
 
 
 def get_dic_state_geom(country):
@@ -24,18 +25,18 @@ def get_dic_state_geom(country):
     return dic_geom
 
 
-def x(country_dhs, dic_geom):
+def get_dict_state(country_dhs, dic_geom, col="region2"):
     """Create dic with state and dhs code for that state"""
     dic = {}
     for i in country_dhs.index:
-        if country_dhs.loc[i]["region2"] in dic.keys():
+        if country_dhs.loc[i][col] in dic.keys():
             pass
         else:
             for key, item in dic_geom.items():
                 if Point(
                     country_dhs.loc[i]["LONGNUM"], country_dhs.loc[i]["LATNUM"]
                 ).within(item):
-                    dic[country_dhs.loc[i]["region2"]] = key
+                    dic[country_dhs.loc[i][col]] = key
 
     return dic
 
@@ -43,19 +44,33 @@ def x(country_dhs, dic_geom):
 # choose country
 
 # merge state
-def add_state_to_dhs(country_dhs, dic_dhs):
-    country_dhs["admin1"] = country_dhs["region2"].apply(lambda x: dic_dhs[x])
+def add_state_to_dhs(country_dhs, dic_dhs, col="region2"):
+    country_dhs["admin1"] = country_dhs[col].apply(lambda x: dic_dhs[x])
     return country_dhs
 
 
 def weighted_mean(data, column_name):
-    data[column_name] = data.apply(lambda x: x[column_name] * x["hhweight"], axis=1)
-    return data.groupby("admin1", as_index=False)[column_name].agg(
+    data[column_name + "_weighted"] = data.apply(
+        lambda x: x[column_name] * x["hhweight"], axis=1
+    )
+    return data.groupby("admin1", as_index=False)[column_name + "_weighted"].agg(
         lambda x: x.mean(skipna=True)
     )
 
 
-def aggregate_dhs_admin1(path_admin1, path_dhs, country_name, country_code):
+def save_df(data, country_code, path_save):
+    data.to_csv(path_save + "/" + country_code + "_admin1_agg.csv", index=False)
+
+
+def aggregate_dhs_admin1(
+    path_admin1,
+    path_dhs,
+    country_name,
+    country_code,
+    col="region2",
+    save=False,
+    path_save=False,
+):
     # get world
     world = adm1.get_world_admin1(path_admin1)
     country = adm1.get_country_admin1(world, country_name)
@@ -68,22 +83,53 @@ def aggregate_dhs_admin1(path_admin1, path_dhs, country_name, country_code):
     )
     # FROM COUNTRY NAME DERIVE CODE
     country_dhs = dhs[dhs.countrycode == country_code].copy()
-    dic_dhs = x(country_dhs, dic_geom)
-    country_dhs = add_state_to_dhs(country_dhs, dic_dhs)
+    dic_dhs = get_dict_state(country_dhs, dic_geom, col)
+    country_dhs = add_state_to_dhs(country_dhs, dic_dhs, col)
 
     for col in dimensions:
         country = pd.merge(
             country, weighted_mean(country_dhs, col), how="left", on="admin1"
         )
 
+    if save:
+        if save:
+            # print(country.columns)
+            country_save = country[
+                [
+                    "country",
+                    "admin1",
+                    "geometry",
+                    "sumpoor_sev_weighted",
+                    "dep_housing_sev_weighted",
+                    "dep_water_sev_weighted",
+                    "dep_nutrition_sev_weighted",
+                    "dep_health_sev_weighted",
+                    "dep_education_sev_weighted",
+                    "dep_sanitation_sev_weighted",
+                    "deprived_sev_weighted",
+                ]
+            ].copy()
+            save_df(country_save, country_code, path_save)
+            print("File saved")
+        # except:
+        #     print(f"Unable to save file, check path: {path_save}")
+
     return country
 
 
 path_admin1 = (
-    "C:/Users/vicin/Desktop/DSSG/Validation Data/ne_10m_admin_1_states_provinces"
+    "C:/Users/vicin/Desktop/DSSG/Data/Validation Data/ne_10m_admin_1_states_provinces"
 )
-path_dhs = r"C:\Users\vicin\Desktop\DSSG\Validation Data"
+path_dhs = r"C:\Users\vicin\Desktop\DSSG\Data\Validation Data"
+path_save = r"C:\Users\vicin\Desktop\DSSG\Data\Validation Data\Agg_admin1"
+
 results = aggregate_dhs_admin1(
-    path_admin1, path_dhs, country_name="Nigeria", country_code="NGA"
+    path_admin1,
+    path_dhs,
+    country_name="Togo",
+    country_code="TGO",
+    col="region",
+    save=True,
+    path_save=path_save,
 )
 print(results.shape)
