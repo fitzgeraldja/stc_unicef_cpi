@@ -77,8 +77,14 @@ def prep_data_mapbox(path_csv, name_save, save=False):
     # data = data[data["population"] > 50].copy()
 
     # Add geometry of the polygon
+    """
+    geo_json (bool, optional) 
+    If True, return output in GeoJson format: lng/lat pairs (opposite order), 
+    and have the last pair be the same as the first. 
+    If False (default), return lat/lng pairs, with the last pair distinct from the first.
+    """
     data["geometry_latlon"] = [
-        Polygon(h3.h3_to_geo_boundary(x, geo_json=False)) for x in data["hex_code"]
+        Polygon(h3.h3_to_geo_boundary(x, geo_json=True)) for x in data["hex_code"]
     ]
     # Compute Coordinates of Centroid (long, lat)
     data["centroid"] = data["hex_code"].apply(
