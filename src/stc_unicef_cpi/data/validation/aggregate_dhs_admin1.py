@@ -68,23 +68,23 @@ def get_child_pop(data, scale_factor=25 * 20.6):
     return child_pop
 
 
-def compute_weights(country_dhs, path_train, scale_factor=25 * 20.6):
+def compute_weights(country_dhs, path_train_csv, scale_factor=25 * 20.6, res=7):
 
-    train_data = pd.read_csv(path_train)
+    train_data = pd.read_csv(path_train_csv, dtype={"hex_code": "Int64"})
+
     # get resolution from train_data
-    res = h3.h3_get_resolution(train_data.loc[0]["hex_code"])
+    # res = h3.h3_get_resolution(train_data.iloc[0]["hex_code"])
     country_dhs["hex_code"] = country_dhs.apply(
         lambda x: h3.geo_to_h3(lat=x["LATNUM"], lng=x["LONGNUM"], resolution=res),
         axis=1,
     )
+    print("hex_code assigned")
 
     # get child measure
-    scale_factor = 25 * 20.6
     train_data["child_pop"] = get_child_pop(train_data, scale_factor=25 * 20.6)
+
     train_data["population_abs"] = train_data["population"] * scale_factor
-    train_data["prop_child"] = train_data.apply(
-        lambda x: x["child_pop"] / x["population_abs"], axis=1
-    )
+    train_data["prop_child"] = train_data["child_pop"] / train_data["population_abs"]
 
     # merge dataframe
     country_dhs = pd.merge(
@@ -122,6 +122,8 @@ def aggregate_dhs_admin1(
     save=False,
     path_save=False,
     scale_factor=25 * 20.6,
+    res=7,
+    weights_on_pop=False,
 ):
     # get world
     world = adm1.get_world_admin1(path_admin1)
@@ -138,65 +140,77 @@ def aggregate_dhs_admin1(
     dic_dhs = get_dict_state(country_dhs, dic_geom, col)
     country_dhs = add_state_to_dhs(country_dhs, dic_dhs, col)
 
-    # compute weights
-    print("Compute Weights")
-    country_dhs["weight_prop"] = list(
-        compute_weights(country_dhs, path_train_csv, scale_factor)
-    )
+    # If weights_on_pop is True, computes the weights considering population
+    # otherwise just considering hhweight
+    if weights_on_pop:
+        # compute weights
+        print("Compute Weights")
+        country_dhs["weight_prop"] = list(
+            compute_weights(country_dhs, path_train_csv, scale_factor, res)
+        )
+        col_weights = "weight_prop"
+        print("compute weights done")
+    else:
+        col_weights = "hhweight"
 
     for col in dimensions:
         country = pd.merge(
             country,
-            weighted_mean(country_dhs, col, "weight_prop"),
+            weighted_mean(country_dhs, col, col_weights),
             how="left",
             on="admin1",
         )
 
+    print("save")
     if save:
         # Here I should check that path_save makes sense
-        if save:
-            # print(country.columns)
-            country_save = country[
-                [
-                    "country",
-                    "admin1",
-                    "geometry",
-                    "sumpoor_sev_weighted",
-                    "dep_housing_sev_weighted",
-                    "dep_water_sev_weighted",
-                    "dep_nutrition_sev_weighted",
-                    "dep_health_sev_weighted",
-                    "dep_education_sev_weighted",
-                    "dep_sanitation_sev_weighted",
-                    "deprived_sev_weighted",
-                ]
-            ].copy()
-            save_df(country_save, country_code, path_save)
-            print("File saved")
+        # print(country.columns)
+        country_save = country[
+            [
+                "country",
+                "admin1",
+                # "geometry",
+                "sumpoor_sev_weighted",
+                "dep_housing_sev_weighted",
+                "dep_water_sev_weighted",
+                "dep_nutrition_sev_weighted",
+                "dep_health_sev_weighted",
+                "dep_education_sev_weighted",
+                "dep_sanitation_sev_weighted",
+                "deprived_sev_weighted",
+            ]
+        ].copy()
+        save_df(country_save, country_code, path_save)
+        print("File saved")
         # except:
         #     print(f"Unable to save file, check path: {path_save}")
-
+    print("saving done")
     return country
 
 
-print("Try1")
+print("Try2")
 path_admin1 = (
     "C:/Users/vicin/Desktop/DSSG/Data/Validation Data/ne_10m_admin_1_states_provinces"
 )
-path_dhs = "C:/Users/vicin\Desktop/DSSG/Data/DHS"
+path_dhs = "C:/Users/vicin/Desktop/DSSG/Data/DHS"
 path_train_csv = (
-    "C:/Users/vicin/Desktop/DSSG/Data/Training Data/hexes_nigeria_res7_thres30.csv"
+    r"C:\Users\vicin\Desktop\DSSG\Data\Training Data\nga_pop.csv"  # I only need the pop data
+    # "C:/Users/vicin/Desktop/DSSG/Data/Training Data/hexes_nigeria_res7_thres30.csv"
 )
 path_save = "C:/Users/vicin/Desktop/DSSG/Data/Validation Data/Agg_admin1"
 
-results = aggregate_dhs_admin1(
-    path_admin1,
-    path_dhs,
-    path_train_csv,
-    country_name="Togo",
-    country_code="TGO",
-    col="region",
-    save=True,
-    path_save=path_save,
-)
-print(results.shape)
+
+# path_save = "C:/Users/vicin/Desktop/DSSG/Data/Validation Data/Agg_admin1"
+
+# results = aggregate_dhs_admin1(
+#     path_admin1,
+#     path_dhs,
+#     path_train_csv,
+#     country_name="Togo",
+#     country_code="TGO",
+#     col="region",
+#     save=True,
+#     path_save=path_save,
+#     res=7,
+# )
+# print(results.shape)
