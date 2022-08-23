@@ -64,18 +64,6 @@ def prep_data_mapbox(path_csv, name_save, save=False):
 
     data = get_data(path_csv)
 
-    # # Rescale
-    # data["population"] = data["population"].apply(lambda x: x * 25 * 20.6)
-
-    # If POPULATION IS MISSING : I REPLACE IT WITH -1,
-    # SO THAT I CAN VISUALIZE THEM ON THE MAP
-    data["population_abs"].fillna(-1, inplace=True)
-    data["child_pop"].fillna(-1, inplace=True)
-
-    # remove hex_code where pop is less than 50
-    # TODO: check that population is not scaled
-    # data = data[data["population"] > 50].copy()
-
     # Add geometry of the polygon
     """
     geo_json (bool, optional) 
@@ -86,10 +74,10 @@ def prep_data_mapbox(path_csv, name_save, save=False):
     data["geometry_latlon"] = [
         Polygon(h3.h3_to_geo_boundary(x, geo_json=True)) for x in data["hex_code"]
     ]
-    # Compute Coordinates of Centroid (long, lat)
-    data["centroid"] = data["hex_code"].apply(
-        lambda x: Point(h3.h3_to_geo(x)[1], h3.h3_to_geo(x)[0])
-    )
+    # # Compute Coordinates of Centroid (long, lat)
+    # data["centroid"] = data["hex_code"].apply(
+    #     lambda x: Point(h3.h3_to_geo(x)[1], h3.h3_to_geo(x)[0])
+    # )
 
     # Create a list of features
     features = [
