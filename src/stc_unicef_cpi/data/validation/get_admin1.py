@@ -11,6 +11,8 @@ def get_world_admin1(path):
     Extract data from shapefile with admin1 labels of the world
     :param path: directory containing shp 'ne_10m_admin_1_states_provinces'
     :type path: str
+    :return: dataframe of the world with information about states and provinces
+    :rtype: geopandas Dataframe
     """
     # https://www.naturalearthdata.com/downloads/110m-cultural-vectors/110m-admin-1-states-provinces/
     world = gpd.read_file(path + "/ne_10m_admin_1_states_provinces.shp")
@@ -26,6 +28,8 @@ def get_country_admin1(world, country_name):
     :type world: pandas DataFrame
     :param country_name: name of a country
     :type country_name: str
+    :return: dataframe of specified country with information about states and provinces
+    :rtype: geopandas Dataframe
     """
     country = world[world["country"] == country_name].copy()
     country = country[["country", "admin1", "geometry"]].copy()
@@ -41,6 +45,8 @@ def get_hex_region(region_name, country, res=7):
     :type country: pandas DataFrame
     :param res: h3 resolution, defaults to 7
     :type res: int, optional
+    :return: dataframe with hexcodes for one country
+    :rtype: Dataframe
     """
     ## TO DO : check if region belongs to country
 
@@ -71,6 +77,8 @@ def get_admin1(path, country_name, res=7):
     :type country_name: str
     :param res: h3 resolution, defaults to 7
     :type res: int, optional
+    :return: dataframe with hexcodes of a country with admin1 information
+    :rtype: Dataframe
     """
     world = get_world_admin1(path)
 

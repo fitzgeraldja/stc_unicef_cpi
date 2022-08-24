@@ -32,6 +32,12 @@ COLUMNS_OPHI = [
 
 
 def clean_df(path):
+    """Read dataframe with OPHI MPI
+    :param path: path to file 'Table-5-Subnational-Results-MPI-2021-uncensored.csv'
+    :type path: str
+    :return: data
+    :rtype: pandas Dataframe
+    """
     # Read dataframe
     df = pd.read_table(
         path + "/Table-5-Subnational-Results-MPI-2021-uncensored.csv",
@@ -46,8 +52,13 @@ def clean_df(path):
 
 def get_validation_data(path, country_name="Nigeria"):
     """
-    country_name
-    subnational_raw: Table 5 uncensored from https://ophi.org.uk/multidimensional-poverty-index/data-tables-do-files/
+    Read dataframe with OPHI MPI
+    :param path: path to file 'Table-5-Subnational-Results-MPI-2021-uncensored.csv'
+    :type path: str
+    :param country_name: name of country, defaults to Nigeria 
+    :type country_name: str, optional
+    :return: data
+    :rtype: pandas Dataframe
     """
     # select dataframe
     subnational_df = clean_df(path)
