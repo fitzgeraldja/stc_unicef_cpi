@@ -43,9 +43,9 @@ scikit_learn==1.1.2
 scipy
 seaborn==0.11.2
 swifter==1.2.0
-tensorflow==2.9.1
-torch==1.12.1
-torchvision==0.13.1
+tensorflow
+torch
+torchvision
 tqdm==4.64.0
 wget==3.2
 woodwork==0.17.0
